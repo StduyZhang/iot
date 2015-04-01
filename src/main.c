@@ -10,12 +10,15 @@
 	 
 #include "edison_serial.h"
 #include "edison_bluetooth.h"
+#include "udp_server.h"
 
 int main(void)
 {
-	BluetoothDev();
+	ScanCodeDevice();
 	
-	//ScanCodeDevice();
+	BluetoothDev();	
+
+	UdpServer();
 		
 	while(1)
 	{

@@ -5,11 +5,13 @@
  */
 
 #include "edison_bluetooth.h"
+#include "udp_server.h"
+
 
 #define CMD_LEN  5
+#define U8 unsigned char
 
 int sd = 0;
-
 int measure_flag = 0;
 
 unsigned char handshake_cmd[] 		= {0xBE,0xB0,0x01,0xb0,0xce};//handshake   check online
@@ -43,37 +45,65 @@ int RecvDataFromBtDev(int fd, unsigned char* data, int len)
 	return ( recv(fd, data, len, 0) );
 }
 
+static U8 crc8(U8 *ptr, U8 len)
+{
+	U8 crc = 0;
+	U8 i = 0;
+
+	while (len--)
+	{
+		crc  ^= *ptr++;
+		for (i=0; i<8; i++)
+		{
+			if (crc & 0x01)
+			{
+				crc = (crc >> 1) ^0x8C;
+			}
+			else
+			{
+				crc >>= 1;
+			}
+		}
+	}
+	return crc;
+
+}
+
+
 int CheckResp(unsigned char* data)//暂时不使用CRC8，因为发现没有收到这个数据
 {
+
 	if ((data[0]==0xd0) && (data[1]==0xc2))
 	{
-		if ((data[2]==0x02) && (data[3]==0x00) && (data[4]==0x00))
+		if ((data[2] == 0x02) && (crc8(data, 5) == data[5])) 
 		{
-			puts("Normal response!");
-			return 1;
-		}
+			switch((data[3]<<8) | data[4])
+			{
+				case 0x0000:
+					puts("Bluetooth-pressure device response normal!");
+					return 1;
+					break;				
 
-		if ((data[2]==0x02) && (data[3]==0xFF) && (data[4]==0xFF))
-		{
-			puts("Error resp: Slave is busy, cann't process!");
+			  	case 0xFFFF:		
+					puts("Error resp: Slave is busy, cann't process!");
+					break;
+			
+			 	case 0x00FF:		
+					puts("Error resp: Cmd is invalid!");
+					break;
+
+				default:
+					break;
+			}
+
 		}
 		
-		if ((data[2]==0x02) && (data[3]==0x00) && (data[4]==0xFF))
-		{
-			puts("Error resp: Cmd is invalid!");
-		}
-		
-		if ((data[2]==0x05) && (data[3]==0xCC))
+		if ((data[2]==0x05) && (data[3]==0xCC) && (crc8(data, 8) == data[8]))
 		{
 			puts("Measure finished!");
 			return 3;
-		}			
-
-		
-	}
-	else
-	{
-		puts("Error resp: Data head is incorrect!");
+		}	
+			
 	}
 	
 	return 0;
@@ -87,14 +117,14 @@ void BtRecvThread(void)
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
 	int i = 0;
-	unsigned char data_buffer[16] = { 0 };
+	unsigned char data_buffer[16] = { 3 };
 	
+	 
 	while(1)
-	{
-		puts("Recving measure result:");
+	{		
 		RecvDataFromBtDev(sd, data_buffer, sizeof(data_buffer));//阻塞接收测量数据
 		
-		#if 1
+		#if 0
 		puts("Recv data:");
 		for (i=0; i<sizeof(data_buffer); i++)
 		{
@@ -105,9 +135,10 @@ void BtRecvThread(void)
 
 		if (CheckResp(data_buffer) == 3)//measure succeed
 		{
+			puts("Recved measure result:");
 			printf("H:%d L:%d Heart:%d HeartHZ:%d \n",
 				data_buffer[4],data_buffer[5],data_buffer[6],data_buffer[7]);
-			//发送数据到客户端服务器
+			SendKeyValueData(data_buffer);//发送数据到客户端服务器
 		}
 		
 		sleep(1);
@@ -133,19 +164,20 @@ int BluetoothThread(void)
     addr.rc_channel = (uint8_t) 1;//how to choose?
     str2ba( dest, &addr.rc_bdaddr );
  
- puts("bluetooth test!");
-	SetBtMeasureFlag();//test
-
+ 	puts("ThreadBluetooth running!");
+	//SetBtMeasureFlag();//TEST
+	
 	while(1) 
-	{
+	{			
 		if (GetBtMeasureFlag() == 1)
 		{
+			puts("Bluetooth-pressure start to measure!");
 			status = connect(sd, (struct sockaddr *)&addr, sizeof(addr));
 			if( status == 0 )// connect to server
 			{
 				//if (SendCmd(sd, handshake_cmd, CMD_LEN) == 1)//测试发现没收到设备响应
 				{							
-					SendDataToBtDev(sd, start_measure_cmd, CMD_LEN);
+					SendDataToBtDev(sd, start_measure_cmd, CMD_LEN);					
 				}
 			}
 

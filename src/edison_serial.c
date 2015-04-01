@@ -1,7 +1,10 @@
 
 #include "edison_serial.h"
+#include "udp_server.h"
+
 
 static struct sockaddr_in target_addr;
+
 
 int sock_fd = 0;
 
@@ -262,7 +265,7 @@ int UART1_Recv(int fd, char *rcv_buf,int data_len)
        }
     else
        {
-          puts("Didn't get data!");
+          //puts("Didn't get data!");
               return FALSE;
        }
 }
@@ -305,6 +308,7 @@ int PrintError(char * err)
 
 int TcpSocketInit(const char *ip,const char *port)
 {
+	 
 	 struct timeval timeout={5,0};//5s  struct timeval{ long tv_sec; long tv_usec; };
 
 	 if((sock_fd=socket(AF_INET,SOCK_STREAM,0))<0)
@@ -352,52 +356,6 @@ int RecvDataFromServer(char* buffer, int len)
 	return(recv(sock_fd, buffer, len, 0));
 }
 
-int SendScanDataToServer(char* inBuffer)
-{
-	int ret = 0;
-	char len_str[10];//存放一个数:数据的长度
-	char str1[BUF_SIZE*4];
-	char str2[BUF_SIZE];
-	char buf[BUF_SIZE];
-	int len = 0;
-
-	   sock_fd = TcpSocketInit(SERVER_IP, SERVER_PORT);//初始化套接口
-	   if (TcpGetConnect(sock_fd) == 0)
-		   puts("Link server succeed");
-
-		//发送数据
-	   memset(str2, 0, sizeof(str2));
-	   sprintf(str2, "obj_id=0&title=book&content=%s", inBuffer);//  //obj_id    title    content
-	   len = strlen(str2);
-
-	   sprintf(len_str, "%d", len);
-
-	   memset(str1, 0, sizeof(str1));
-	   strcat(str1, "POST http://10.10.1.125:8080/NiotService/msg/addMsg.do HTTP/1.1\n");
-	   strcat(str1, "Host: 10.10.1.125\n");
-	   strcat(str1, "Content-Type: application/x-www-form-urlencoded\n");
-	   strcat(str1, "Content-Length: ");
-	   strcat(str1, len_str);
-	   strcat(str1, "\n\n");
-
-	   strcat(str1, str2);
-	   strcat(str1, "\r\n\r\n");
-
-	   printf("[Send scan data]:\n%s\n\n",str1);
-
-	   ret = SendDataToServer(str1,strlen(str1));
-	   if (ret < 0) {
-			   printf("消息发送失败！错误代码:%d，错误信息:'%s'\n",errno, strerror(errno));
-			   exit(0);
-	   }else{
-			   printf("消息发送成功，共发送 %d 字节！\n\n", ret);
-	   }
-
-
-	   return 0;
-}
-
-
 
 int ScanCodeDevice(void)
 {
@@ -435,21 +393,22 @@ int ThreadSerialScanCode(void)
 
 	//  UART1_Close(fd);
 
+	puts("Scan device running!");
+
 	while(1)
-	{
-		puts("Waiting for receive data:\n");
+	{		
 	    len = UART1_Recv(fd, serial_buf,100);//串口接受100字节
 	    if(len > 0)
 	    {
 		   serial_buf[len] = '\0';
-	       printf("Received data : %s,len = %d\n",serial_buf,len);
+	       printf("Received scan data : %s,len = %d\n",serial_buf,len);
 /*
 			if(serial_buf[3] == 3)
 			{
 				SetBtMeasureFlag();
 			}
 */
-		   SendScanDataToServer(serial_buf);
+		   SendMessData(serial_buf);
         }
 
 		sleep(1);

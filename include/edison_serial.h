@@ -40,10 +40,7 @@
 
 
 
-#define BUF_SIZE    1024
 
-#define SERVER_IP       "10.10.1.125"
-#define SERVER_PORT     "8080"
 
 #define LED_PORT   13  //edison开发板J2B1 端子13号引脚
 
