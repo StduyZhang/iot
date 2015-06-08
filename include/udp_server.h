@@ -31,7 +31,7 @@
 
 
 
-#define SERVER_IP       "10.10.1.125"
+#define SERVER_IP       "10.10.1.244"
 #define SERVER_PORT     "8080"
 
 

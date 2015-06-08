@@ -29,12 +29,9 @@
 #include <time.h>
 
 #include "mraa/gpio.h"
+#include "mraa.h"
 
 
-
-//∫Í∂®“Â
-#define FALSE  -1
-#define TRUE   0
 
 #define SERIAL_DEV  "/dev/ttyMFD1"
 

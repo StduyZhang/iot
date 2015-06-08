@@ -14,12 +14,13 @@
 
 int SendMessData(char* inBuffer)
 {
-	int ret = 0;
-	char len_str[10];//存放一个数:数据的长度
-	char str1[BUF_SIZE*4];
-	char str2[BUF_SIZE];
-	char buf[BUF_SIZE];
-	int len = 0;
+
+  	int ret = 0;
+  	char len_str[10];//存放一个数:数据的长度
+  	char str1[BUF_SIZE*4];
+  	char str2[BUF_SIZE];
+  	char buf[BUF_SIZE];
+  	int len = 0;
 	   
 	   int sock_fd = 0;
 
@@ -33,34 +34,40 @@ int SendMessData(char* inBuffer)
 	   {
 	   	   return -1;
 	   }
+	   
 		//发送数据
 	   memset(str2, 0, sizeof(str2));
 	   sprintf(str2, "obj_id=0&title=book&content=%s&ispush=1", inBuffer);//  //obj_id    title    content
 	   len = strlen(str2);
-
 	   sprintf(len_str, "%d", len);
 
 	   memset(str1, 0, sizeof(str1));
-	   strcat(str1, "POST http://10.10.1.125:8080/NiotService/msg/addMsg.do HTTP/1.1\n");
-	   strcat(str1, "Host: 10.10.1.125\n");
+	   strcat(str1, "POST http://10.10.1.244:8080/NiotService/msg/addMsg.do HTTP/1.1\n");
+	   strcat(str1, "Host: 10.10.1.244\n");
 	   strcat(str1, "Content-Type: application/x-www-form-urlencoded\n");
 	   strcat(str1, "Content-Length: ");
 	   strcat(str1, len_str);
-	   strcat(str1, "\n\n");
-
+	   strcat(str1, "\n");	   
+	   
+	   strcat(str1, "\n");//空行
+	   
 	   strcat(str1, str2);
-	   strcat(str1, "\r\n\r\n");
-
-	   printf("[Send scan data]:\n%s\n\n",str1);
+	   strcat(str1, "\n");	   
 
 	   ret = SendDataToServer(str1,strlen(str1));
-	   if (ret < 0) {
-			   printf("消息发送失败！错误代码:%d，错误信息:'%s'\n",errno, strerror(errno));
-			   exit(0);
-	   }else{
-			   printf("消息发送成功，共发送 %d 字节！\n\n", ret);
-	   }
 
+	   printf("[Send scan data]:\n%s\n\n",str1);
+	   
+	   if (ret < 0) 
+	   {
+		   printf("消息发送失败！错误代码:%d，错误信息:'%s'\n",errno, strerror(errno));
+		   exit(0);
+	   }
+	   
+	   else
+	   {
+		   printf("消息发送成功，共发送 %d 字节！\n\n", ret);
+	   }
 
 	   return 0;
 }
@@ -80,11 +87,18 @@ int SendKeyValueData(char* inBuffer)
 	   int sock_fd = 0;
 
 	   sock_fd = TcpSocketInit(SERVER_IP, SERVER_PORT);//初始化套接口
-	   if (TcpGetConnect(sock_fd) == 0)		   puts("Link server succeed");
-
+	   if (TcpGetConnect(sock_fd) == 0)
+	   {
+		   puts("Link server succeed");
+	   }
+	   else
+	   {
+	   	   return -1;
+	   }
 		//发送数据
 	   memset(str2, 0, sizeof(str2));
-	   sprintf(str2, "obj_id=11&k=bp_meter&v=Hp=%d,Lp=%d,Heart=%d,Hab=%d&type=AR", inBuffer[4],inBuffer[5],inBuffer[6],inBuffer[7]);//  //obj_id    title    content
+	   sprintf(str2, "obj_id=11&k=bp_meter&v={\"c\":0,\"d\":[{\"Hp\":\"%d\",\"Lp\":\"%d\",\"HB\":\"%d\",\"HR\":\"%d\"}],\"info\":\"0\"}&type=AR",
+	   					inBuffer[4],inBuffer[5],inBuffer[6],inBuffer[7]);//  //obj_id    title    content
 	   len = strlen(str2);
 
 	   sprintf(len_str, "%d", len);
@@ -98,7 +112,7 @@ int SendKeyValueData(char* inBuffer)
 	   strcat(str1, "\n\n");
 
 	   strcat(str1, str2);
-	   strcat(str1, "\r\n\r\n");
+	   strcat(str1, "\n");
 
 	   printf("[Send scan data]:\n%s\n\n",str1);
 
@@ -125,14 +139,14 @@ void UdpRecvMessage(int sockfd)
 
 	 addrlen = sizeof(struct sockaddr);
 	 
-	 puts("UdpServer running!");
+	 puts("Udp service of local server is running!\n");
 	 
 	 while(1)
 	 { 
 		  bzero(msg,sizeof(msg)); // 初始化,清零		  
 		  n=recvfrom(sockfd,msg,MAX_MSG_SIZE,0,(struct sockaddr*)&addr,&addrlen); // 从客户端接收消息
 		  msg[n]=0; //添加结束符'\0'
-		  fprintf(stdout,"UdpServer has received: %s \n",msg); // 显示接收的消息
+		  fprintf(stdout,"Udp service received msg: %s \n",msg); // 显示接收的消息
 		  
 		  if (strcmp(msg,"device=bpmeter&method=measure") == 0)
 		  {

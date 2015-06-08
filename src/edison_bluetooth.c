@@ -154,24 +154,36 @@ int BluetoothThread(void)
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 	    
 	int status = 0;
-    char dest[18] = BT_MAC;
+       char dest[18] = BT_MAC;
 	struct sockaddr_rc addr = { 0 };
     
-    sd = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);// allocate a socket
+       
+       // set the connection parameters (who to connect to)
+       addr.rc_family = AF_BLUETOOTH;
+       addr.rc_channel = (uint8_t) 1;//how to choose?
+       str2ba( dest, &addr.rc_bdaddr );
 
-    // set the connection parameters (who to connect to)
-    addr.rc_family = AF_BLUETOOTH;
-    addr.rc_channel = (uint8_t) 1;//how to choose?
-    str2ba( dest, &addr.rc_bdaddr );
- 
- 	puts("ThreadBluetooth running!");
-	//SetBtMeasureFlag();//TEST
+	 if (system("rfkill unblock bluetooth") != -1)
+	{
+		puts("Open system bluetooth function OK!");
+	}
+	 else
+	 {
+		puts("Failed to open system bluetooth function !");
+	}
+	 
+ 	puts("Thread Bluetooth sevice is running!\n");
+
 	
+	//SetBtMeasureFlag();//TEST
+		
 	while(1) 
 	{			
 		if (GetBtMeasureFlag() == 1)
 		{
-			puts("Bluetooth-pressure start to measure!");
+			puts("Bluetooth-pressure start to measure!\n");
+			
+			sd = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);// allocate a socket  ´®¿ÚÀ¶ÑÀ
 			status = connect(sd, (struct sockaddr *)&addr, sizeof(addr));
 			if( status == 0 )// connect to server
 			{
@@ -184,14 +196,17 @@ int BluetoothThread(void)
 			else if( status < 0 )
 			{
 				perror("Connect bluetooth device failed!");
+				
 			}
-		
+			
+			close(sd);
+
 			ClrBtMeasureFlag();//measure over,  clear flag
 		}
-		sleep(2);
+		sleep(1);
 	}
 
-    close(sd);
+   
 
     //if (pthread_cancel( id_blue_tooth) != 0)   puts("Thread Bluetooth cancel failed!");
     

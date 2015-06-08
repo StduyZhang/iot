@@ -224,7 +224,7 @@ int UART1_Init(int fd, int speed,int flow_ctrl,int databits,int stopbits,int par
 {
     int err;
     //设置串口数据帧格式
-    if (UART1_Set(fd,19200,0,8,1,'N') == FALSE)
+    if (UART1_Set(fd,speed, flow_ctrl, databits, stopbits,parity) == FALSE)
        {
         return FALSE;
        }
@@ -357,6 +357,8 @@ int RecvDataFromServer(char* buffer, int len)
 }
 
 
+
+
 int ScanCodeDevice(void)
 {
 	if(pthread_create(&id_serial,NULL, (void*(*)(void*))ThreadSerialScanCode, NULL))
@@ -368,7 +370,6 @@ int ScanCodeDevice(void)
 }
 
 
-
 int ThreadSerialScanCode(void)
 {
 	 char serial_buf[100] = "hello";
@@ -377,23 +378,25 @@ int ThreadSerialScanCode(void)
 	 int len = 0;
 
 	 fd = UART1_Open(fd,SERIAL_DEV); //打开串口，返回文件描述符
-/*
+
 	 do{
-		   err = UART1_Init(fd,9600,0,8,1,'N');
-		   printf("Set Port success!\n");
+		   err = UART1_Init(fd,115200,0,8,1,'N');
+		   puts("Serial initial success!\n");
 
 	   }while(FALSE == err || FALSE == fd);
-
+	 
+/*
 	    len = UART1_Send(fd,serial_buf,5);
-			     if(len > 0)
-			       printf(" send data  successful\n");
-			     else
-			       printf("send data failed!\n");
+	    
+	    if(len > 0)
+		     printf(" send data  successful\n");
+	    else
+		     printf("send data failed!\n");
 */
 
-	//  UART1_Close(fd);
 
-	puts("Scan device running!");
+
+	puts("Serial scan device is running!\n");
 
 	while(1)
 	{		
@@ -402,17 +405,14 @@ int ThreadSerialScanCode(void)
 	    {
 		   serial_buf[len] = '\0';
 	       printf("Received scan data : %s,len = %d\n",serial_buf,len);
-/*
-			if(serial_buf[3] == 3)
-			{
-				SetBtMeasureFlag();
-			}
-*/
+
 		   SendMessData(serial_buf);
         }
 
 		sleep(1);
 	}
+
+	//  UART1_Close(fd);
 	return 0;
 
 }
