@@ -36,6 +36,8 @@
 #define SERIAL_DEV  "/dev/ttyMFD1"
 
 
+#define TRUE   1
+#define FALSE  0
 
 
 

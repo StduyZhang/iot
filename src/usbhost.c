@@ -7,9 +7,11 @@
 #include "udp_server.h"
 #include "stdbool.h"
 
-struct input_event buff;
-int usb_fd;
-int read_nu;
+
+#include "my_sqlite.h"
+
+
+
 
 
 
@@ -183,8 +185,20 @@ unsigned char ShiftNumToChar(int value)  //解析带有上档键的字符
 }
 
 
+
+
+save_client_infor(const char *p)
+{		 
+	 sqlite_update_tcp_table("area",  p); 	
+	 puts("save area information OK!");
+}
+
+
 int ThreadUsbHost(void)
 {	
+	struct input_event buff;
+	int usb_fd;
+
 	time_t t_start = 0, t_tmp = 0, t_date = 0;
 	struct tm *local_t;
 	
@@ -199,6 +213,9 @@ int ThreadUsbHost(void)
 	mraa_gpio_context gpio;
 	gpio = mraa_gpio_init(13);
 	mraa_gpio_dir(gpio, MRAA_GPIO_OUT);
+
+	init_table();  //////////////
+
 
 
 	usb_fd = open("/dev/input/event2", O_RDONLY|O_NONBLOCK);//非阻塞
@@ -272,6 +289,9 @@ int ThreadUsbHost(void)
 					memset(area_str, 0, sizeof(area_str));	
 					snprintf(area_str, sizeof(area_str), "%s",ptr+4);//暂时存到内存,地址信息去掉FZED，从ptr+4开始
 					printf("Scanned area information!  area: %s\n",area_str);
+					
+					save_client_infor(area_str);
+					
 				}
 				
 				else//扫描的是商品信息，加入时间地点信息，发送到溯源平台
