@@ -7,13 +7,9 @@
 #include "udp_server.h"
 #include "stdbool.h"
 
-
 #include "my_sqlite.h"
 
-
-
-
-
+bool scan_flag = FALSE;
 
 /*错误的
 void led_init( mraa_gpio_context gpio)
@@ -30,10 +26,20 @@ void led_blink(mraa_gpio_context gpio)
 }
 */
 
+char* get_local_time_str(void)
+{
+	time_t t_date = 0;
+	struct tm *local_t;
+	static char time_str[50] ;
 
-
-
-
+	t_date = time(NULL);
+	local_t = localtime(&t_date);
+	memset(time_str, 0, sizeof(time_str));
+	snprintf(time_str, sizeof(time_str), ":%d.%d.%d %2d:%2d:%2d",
+						local_t->tm_year+1900, local_t->tm_mon+1,local_t->tm_mday,
+						local_t->tm_hour, local_t->tm_min, local_t->tm_sec);
+	return time_str;
+}
 
 unsigned char NumToChar(int value)
 {
@@ -186,37 +192,30 @@ unsigned char ShiftNumToChar(int value)  //解析带有上档键的字符
 
 
 
-
-save_client_infor(const char *p)
-{		 
-	 sqlite_update_tcp_table("area",  p); 	
-	 puts("save area information OK!");
-}
-
-
 int ThreadUsbHost(void)
 {	
-	struct input_event buff;
-	int usb_fd;
-
-	time_t t_start = 0, t_tmp = 0, t_date = 0;
-	struct tm *local_t;
+	int usb_fd = 0;
+	struct input_event buff;	
+	char info_str[256] = {0};
 	
-	int   ledstate = 0;
-	bool scan_flag = FALSE;	
+	time_t t_start = 0, t_tmp = 0;		
+	int   ledstate = 0;		
 
 	char *ptr = NULL;
-	char info_str[256] = {0};			
-	char area_str[50] = "unknown area!please scan area code!";
+	char *area = NULL;
+	char *cur_time = NULL;	
 	
 	
 	mraa_gpio_context gpio;
 	gpio = mraa_gpio_init(13);
 	mraa_gpio_dir(gpio, MRAA_GPIO_OUT);
 
+
 	init_table();  //////////////
+	area = get_info_from_table("area","value");
+	printf("area=%s\n",area);
 
-
+	
 
 	usb_fd = open("/dev/input/event2", O_RDONLY|O_NONBLOCK);//非阻塞
        if (usb_fd < 0)
@@ -283,30 +282,21 @@ int ThreadUsbHost(void)
 				
 				//扫描的信息是位置码，保存当地位置信息				
 				//if (strstr(info_str, "info:area") != NULL)//地址信息设定以area开头，从字符串中查找"info:area" ，
-				if ((ptr=strstr(info_str, "FZED") )!= NULL)//test
-				{
-					//存入本地数据库
-					memset(area_str, 0, sizeof(area_str));	
-					snprintf(area_str, sizeof(area_str), "%s",ptr+4);//暂时存到内存,地址信息去掉FZED，从ptr+4开始
-					printf("Scanned area information!  area: %s\n",area_str);
-					
-					save_client_infor(area_str);
-					
+				if ( (ptr = strstr(info_str, "FZED")) != NULL)//测试 以FZED开头,返回以FZED开头的字符串
+				{									
+					printf("Scanned area information!	area: %s\n",ptr+4);
+					save_client_area_infor(ptr+4);//保存新位置信息
+					area = get_info_from_table("area","value");//更新区域信息
 				}
 				
 				else//扫描的是商品信息，加入时间地点信息，发送到溯源平台
-				{
-					t_date = time(NULL);
-					local_t = localtime(&t_date);
+				{					
+					cur_time = get_local_time_str();
+					snprintf(info_str+strlen(info_str), sizeof(info_str),	"\ntime:%s\narea:%s\n",cur_time,area);//把时间和位置信息加入到商品信息中					
+					printf("Scanned product information!\n%s\n",info_str);
 
-					snprintf(info_str+strlen(info_str), sizeof(info_str),
-						"\ntime:%d.%d.%d %d:%d:%d\narea:%s\n",
-						local_t->tm_year+1900, local_t->tm_mon+1,local_t->tm_mday,
-						local_t->tm_hour, local_t->tm_min, local_t->tm_sec,
-						area_str);//把时间和位置信息加入到商品信息中
-						
-					puts(info_str);
 					SendMessData(info_str);
+					
 				}
 		   }
 	   }

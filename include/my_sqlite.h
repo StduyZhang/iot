@@ -23,9 +23,15 @@ int sqlite_delete(const char *table_name,const char *qualify,sqlite3 *db);
 			
 int sqlite_read(const  char *table_name, sqlite3 *db);
 
-int init_tcp_table(const char* filename);
+char* sqlite_select(const char *table_name, const char *prefence, const char *condition, sqlite3 *db);
 
-int sqlite_update_tcp_table( const char *name,  const char *value );
+int init_area_table(const char* filename);
+
+int sqlite_update_table( const char *name,  const char *value );
+
+int save_client_area_infor(const char *info);
+
+char* get_info_from_table(const char *name,  const char *value);
 
 int init_table(void);
 

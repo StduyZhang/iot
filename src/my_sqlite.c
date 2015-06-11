@@ -70,7 +70,32 @@ int sqlite_delete(const char *table_name,const char *qualify,sqlite3 *db)
 	snprintf(sql,sizeof(sql),"delete from %s where %s;",table_name, qualify);	
 	return(sqlite_write(sql,db));
 }
-/*				
+
+char* sqlite_select(const char *table_name, const char *prefence, const char *condition,sqlite3 *db)	
+{	
+	int nRow = 0, nColumn = 0;		
+	static char **read_data;
+	
+	//SELECT tbl_name FROM sqlite_master WHERE type = 'table';
+	char sql[128]= {0};
+	snprintf(sql,sizeof(sql),"select %s from %s where %s;",prefence, table_name, condition);		
+
+	//puts(sql);
+
+	result = sqlite3_get_table( db, sql, &read_data, &nRow, &nColumn, &errmsg );		   
+	if( result == SQLITE_OK )
+	{
+		return read_data[1];//改进
+	}
+	else
+	{
+		return NULL;
+	}
+		
+}
+
+
+				
 int sqlite_read(const  char *table_name, sqlite3 *db)	
 {	
 	int index;
@@ -110,10 +135,38 @@ int sqlite_read(const  char *table_name, sqlite3 *db)
 }
 
 
+char* get_info_from_table(const char *name,  const char *value)
+{
+	sqlite3 *p_db = NULL;
 
-*/
+	const char *filename= TCP_IP_PORT_PASSWORD;
+	char table_name[]= TABLE_NAME;		
+	char condition[40]={0};	
 
-int sqlite_update_tcp_table( const char *name,   const char *value )
+
+	static char* info =NULL;
+	
+	sqlite_open(filename,&p_db);			
+	
+	
+	memset(condition,0,sizeof(condition));
+	snprintf(condition,sizeof(condition),"name=='%s'",name);	
+
+	//sqlite_read(table_name, p_db);	
+
+	
+	info = sqlite_select( table_name, value, condition, p_db );
+	if(NULL == info )
+	{
+		puts( "*********get info from area_table error*********");			
+	}
+	sqlite3_close(p_db);	
+		
+	return info;
+}
+
+
+int sqlite_update_table( const char *name,   const char *value )
 {    	
 	sqlite3 *p_db = NULL;
 
@@ -142,7 +195,7 @@ int sqlite_update_tcp_table( const char *name,   const char *value )
 
 
 
-int init_tcp_table(const char* filename)
+int init_area_table(const char* filename)
 {	
 	sqlite3 *p_db = NULL;
 	
@@ -157,17 +210,27 @@ int init_tcp_table(const char* filename)
 	snprintf(sql,sizeof(sql),"'%s','%s'","area","");	
 	sqlite_insert( table_name ,sql, p_db );
 
-	
-
 	sqlite3_close(p_db);
+
+	return 0;
 
 }
 
 
+int save_client_area_infor(const char *info)//存入本地数据库
+{		
+	if (NULL == info)    return -1;	
+	
+	 sqlite_update_table("area", info); 	
+	 puts("save area information OK!");
+
+	 return 0;
+}
+
 
 int init_table(void)
 {
-	init_tcp_table( TCP_IP_PORT_PASSWORD );
+	init_area_table( TCP_IP_PORT_PASSWORD );
 
 }
 
